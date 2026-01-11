@@ -89,9 +89,8 @@ class ScraperUI:
     def stopScraping(self):
         if self.scraper:
             self.logMessage("Stopping scraper...")
-            self.scraper.closeBrowser()
-            self.isRunning = False
-            self.updateStatus("Stopped")
+            self.scraper.shouldStop = True
+            self.updateStatus("Stopping...")
             self.startButton.config(state=tk.NORMAL)
             self.stopButton.config(state=tk.DISABLED)
             self.maxPagesEntry.config(state=tk.NORMAL)
