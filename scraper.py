@@ -73,11 +73,9 @@ class ModhubScraper:
                     elif line == 'Released' and i + 1 < len(lines):
                         modData['released'] = utils.cleanText(lines[i + 1])
                 
-                h2Title = soup.find('h2')
-                if h2Title:
-                    nextP = h2Title.find_next('p')
-                    if nextP:
-                        modData['description'] = utils.cleanText(nextP.get_text())
+                descDiv = soup.find('div', class_='top-line')
+                if descDiv:
+                    modData['description'] = utils.cleanText(descDiv.get_text())
                 
                 downloadLink = soup.find('a', string='DOWNLOAD')
                 if downloadLink and downloadLink.get('href'):
