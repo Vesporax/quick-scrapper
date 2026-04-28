@@ -35,6 +35,9 @@ class ScraperUI:
         
         self.stopButton = ttk.Button(buttonFrame, text="Stop", command=self.stopScraping, state=tk.DISABLED)
         self.stopButton.grid(row=0, column=1, padx=5)
+
+        self.testButton = ttk.Button(buttonFrame, text="Try Most Recent", command=self.tryMostRecent)
+        self.testButton.grid(row=0, column=2, padx=5)
         
         ttk.Label(mainFrame, text="Progress:").grid(row=2, column=0, sticky=tk.W, pady=5)
         
@@ -53,6 +56,15 @@ class ScraperUI:
     def updateStatus(self, status):
         self.statusLabel.config(text=status)
     
+    def _setRunningState(self, running):
+        """Toggle all controls based on whether a job is active."""
+        state = tk.DISABLED if running else tk.NORMAL
+        self.startButton.config(state=state)
+        self.testButton.config(state=state)
+        self.maxPagesEntry.config(state=state)
+        self.stopButton.config(state=tk.NORMAL if running else tk.DISABLED)
+        self.isRunning = running
+
     def startScraping(self):
         try:
             maxPages = int(self.maxPagesVar.get())
@@ -63,10 +75,7 @@ class ScraperUI:
             self.logMessage("Error: Invalid max pages value")
             return
         
-        self.isRunning = True
-        self.startButton.config(state=tk.DISABLED)
-        self.stopButton.config(state=tk.NORMAL)
-        self.maxPagesEntry.config(state=tk.DISABLED)
+        self._setRunningState(True)
         self.updateStatus("Scraping...")
         
         self.scraperThread = threading.Thread(target=self.runScraper, args=(maxPages,), daemon=True)
@@ -81,19 +90,32 @@ class ScraperUI:
             self.logMessage(f"Error: {str(e)}")
             self.updateStatus("Error")
         finally:
-            self.isRunning = False
-            self.startButton.config(state=tk.NORMAL)
-            self.stopButton.config(state=tk.DISABLED)
-            self.maxPagesEntry.config(state=tk.NORMAL)
-    
+            self._setRunningState(False)
+
+    def tryMostRecent(self):
+        """Run a single-mod test without saving to disk."""
+        self._setRunningState(True)
+        self.updateStatus("Testing...")
+        self.scraperThread = threading.Thread(target=self.runTestScrape, daemon=True)
+        self.scraperThread.start()
+
+    def runTestScrape(self):
+        try:
+            self.scraper = ModhubScraper(progressCallback=self.logMessage)
+            self.scraper.scrapeOne()
+            self.updateStatus("Test complete")
+        except Exception as e:
+            self.logMessage(f"Error: {str(e)}")
+            self.updateStatus("Error")
+        finally:
+            self._setRunningState(False)
+
     def stopScraping(self):
         if self.scraper:
             self.logMessage("Stopping scraper...")
             self.scraper.shouldStop = True
             self.updateStatus("Stopping...")
-            self.startButton.config(state=tk.NORMAL)
-            self.stopButton.config(state=tk.DISABLED)
-            self.maxPagesEntry.config(state=tk.NORMAL)
+            self._setRunningState(False)
     
     def run(self):
         self.window.mainloop()
